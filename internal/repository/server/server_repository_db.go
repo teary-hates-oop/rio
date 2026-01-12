@@ -22,8 +22,20 @@ func (r *DBServerRepository) CreateMembership(membership *models.UserServer) err
 	return db.DB.Create(membership).Error
 }
 
-func (r *DBServerRepository) GetUserMembership(u_id, s_id string) {
+func (r *DBServerRepository) GetUserMembership(u_id, s_id string) (*models.UserServer, error) {
+	var membership models.UserServer
+	err := db.DB.
+		Where("user_id = ? AND server_id = ?", u_id, s_id).
+		First(&membership).Error
 
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &membership, nil
 }
 
 func (r *DBServerRepository) GetServerByID(ulid string) (*models.Server, error) {

@@ -62,5 +62,59 @@ func (s *ServerService) CreateServer(currentUserID, name string) (*models.Server
 }
 
 func (s *ServerService) GetServer(currentUserID, serverID string) (*models.Server, error) {
+	server, err := s.serverRepo.GetServerByID(serverID)
+	if err != nil {
+		return nil, err
+	}
 
+	isMember, err := s.IsUserMember(currentUserID, serverID)
+	if err != nil {
+		return nil, err
+	}
+	if !isMember {
+		return nil, errors.New("user is not a member of server")
+	}
+	return server, nil
+}
+
+func (s *ServerService) IsUserMember(currentUserID, serverID string) (bool, error) {
+	membership, err := s.serverRepo.GetUserMembership(currentUserID, serverID)
+	if err != nil {
+		return false, err
+	}
+	return membership != nil, nil
+}
+
+func (s *ServerService) UpdateServerName(currentUserID, serverID, newName string) error {
+	newName = html.EscapeString(strings.TrimSpace(newName))
+
+	if newName == "" {
+		return errors.New("server name cannot be empty")
+	}
+	if len(newName) < 3 || len(newName) > 100 {
+		return errors.New("server name must be between 3 and 100 characters")
+	}
+
+	_, err := s.serverRepo.GetServerByID(serverID)
+	if err != nil {
+		return err
+	}
+
+	membership, err := s.serverRepo.GetUserMembership(currentUserID, serverID)
+	if err != nil {
+		return err
+	}
+	if membership == nil {
+		return errors.New("user is not a member of server")
+	}
+
+	if membership.Role != "owner" && membership.Role != "admin" {
+		return errors.New("insufficent permissions")
+	}
+
+	err = s.serverRepo.UpdateServer(serverID, &models.Server{Name: newName})
+	if err != nil {
+		return err
+	}
+	return nil
 }
