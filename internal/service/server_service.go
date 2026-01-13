@@ -52,6 +52,19 @@ func validPermissions(userMembership, targetMembership models.UserServer) bool {
 	}
 }
 
+func (s *ServerService) ListUserServers(currentUserID string) ([]*models.Server, error) {
+	if currentUserID == "" {
+		return nil, errors.New("current user ID is required")
+	}
+
+	servers, err := s.serverRepo.GetServersByUser(currentUserID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve user servers: %w", err)
+	}
+
+	return servers, nil
+}
+
 func (s *ServerService) CreateServer(currentUserID, name string) (*models.Server, error) {
 
 	name = html.EscapeString(strings.TrimSpace(name))

@@ -2,23 +2,146 @@ package handlers
 
 import (
 	"net/http"
-	"rio/internal/models"
-	"rio/internal/store"
+	"rio/internal/service"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-func CreateServer(c *gin.Context) {
-	var newServer models.Server
-	if err := c.ShouldBindJSON(&newServer); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
-		return
-	}
-	newServer.ID = store.GetNextServerId()
-	store.Servers = append(store.Servers, newServer)
-	c.JSON(http.StatusCreated, newServer)
+type ServerHandler struct {
+	service *service.ServerService
 }
 
-func GetServers(c *gin.Context) {
-	c.JSON(http.StatusOK, store.Servers)
+func NewServerHandler(svc *service.ServerService) *ServerHandler {
+	return &ServerHandler{service: svc}
+}
+
+func (h *ServerHandler) CreateServer(c *gin.Context) {
+	currentUserID := c.GetString("user_id")
+	if currentUserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return
+	}
+
+	var input struct {
+		Name string `json:"name" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	server, err := h.service.CreateServer(currentUserID, input.Name)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, server)
+}
+
+func (h *ServerHandler) GetServers(c *gin.Context) {
+	currentUserID := c.GetString("user_id")
+	if currentUserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return
+	}
+
+	servers, err := h.service.ListUserServers(currentUserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, servers)
+}
+
+func (h *ServerHandler) GetServer(c *gin.Context) {
+	currentUserID := c.GetString("user_id")
+	if currentUserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return
+	}
+
+	serverID := c.Param("id")
+	if serverID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "server ID is required"})
+		return
+	}
+
+	server, err := h.service.GetServer(currentUserID, serverID)
+	if err != nil {
+		if err.Error() == "user is not a member of server" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusNotFound, gin.H{"error": "server not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, server)
+}
+
+func (h *ServerHandler) UpdateServer(c *gin.Context) {
+	currentUserID := c.GetString("user_id")
+	if currentUserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return
+	}
+
+	serverID := c.Param("id")
+	if serverID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "server ID is required"})
+		return
+	}
+
+	var input struct {
+		Name string `json:"name" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.service.UpdateServerName(currentUserID, serverID, input.Name)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		if strings.Contains(err.Error(), "permissions") {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+func (h *ServerHandler) DeleteServer(c *gin.Context) {
+	currentUserID := c.GetString("user_id")
+	if currentUserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return
+	}
+
+	serverID := c.Param("id")
+	if serverID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "server ID is required"})
+		return
+	}
+
+	err := h.service.DeleteServer(currentUserID, serverID)
+	if err != nil {
+		if strings.Contains(err.Error(), "permissions") {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusNotFound, gin.H{"error": "server not found"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
