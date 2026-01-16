@@ -22,7 +22,7 @@ func SendMessage(c *gin.Context) {
 		return
 	}
 
-	newMessage.ChannelID = channel_id
+	newMessage.ChannelID = strconv.Itoa(channel_id)
 
 	if strings.TrimSpace(newMessage.Content) == "" {
 		c.JSON(http.StatusNotFound, gin.H{"error": "message content must not be empty"})
@@ -35,12 +35,7 @@ func SendMessage(c *gin.Context) {
 }
 
 func GetMessages(c *gin.Context) {
-	channel_id, err := strconv.Atoi(c.Param("channel_id"))
-
-	if err != nil || channel_id < 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "server id must be a valid non-negative integer"})
-		return
-	}
+	channel_id := c.Param("channel_id")
 
 	var filteredMessages []models.Message
 	for _, message := range store.Messages {

@@ -6,7 +6,7 @@ import (
 
 type Server struct {
 	gorm.Model
-	ULID     string `gorm:"type:varchar(26);primaryKey;unique"`
+	ULID     string `gorm:"column:ul_id;type:varchar(26);primaryKey;unique;not null"`
 	Name     string `gorm:"size:255;not null"`
 	OwnerID  string `gorm:"type:varchar(26);index"`
 	Users    []User `gorm:"many2many:user_servers;"`

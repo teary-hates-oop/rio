@@ -15,6 +15,9 @@ func NewDBServerRepository() *DBServerRepository {
 }
 
 func (r *DBServerRepository) Create(server *models.Server) error {
+	if server.ULID == "" {
+		return errors.New("server ULID is empty")
+	}
 	return db.DB.Create(server).Error
 }
 

@@ -3,8 +3,8 @@ package setup
 import (
 	"rio/internal/db"
 	"rio/internal/handlers"
-	server "rio/internal/repository/server" // alias: server
-	user "rio/internal/repository/user"     // alias: user
+	serverRepo "rio/internal/repository/server"
+	userRepo "rio/internal/repository/user"
 	"rio/internal/service"
 )
 
@@ -18,24 +18,20 @@ type Dependencies struct {
 func Setup() *Dependencies {
 	db.ConnectDataBase()
 
-	// User layer
-	userRepo := user.NewDBUserRepository()
-	userService := service.NewUserService(userRepo)
+	userRepository := userRepo.NewDBUserRepository()
+	userService := service.NewUserService(userRepository)
 	userHandler := handlers.NewUserHandler(userService)
 
-	// Server layer
-	serverRepo := server.NewDBServerRepository()
-	serverService := service.NewServerService(serverRepo, userRepo) // pass userRepo for membership checks
+	serverRepository := serverRepo.NewDBServerRepository()
+	serverService := service.NewServerService(serverRepository, userRepository)
 	serverHandler := handlers.NewServerHandler(serverService)
 
-	// Channel layer (uncomment when ready)
-	// channelRepo := channel.NewDBChannelRepository()
-	// channelService := service.NewChannelService(channelRepo, serverRepo)
+	// channelRepository := channel.NewDBChannelRepository()
+	// channelService := service.NewChannelService(channelRepository, serverRepository)
 	// channelHandler := handlers.NewChannelHandler(channelService)
 
-	// Message layer (uncomment when ready)
-	// messageRepo := message.NewDBMessageRepository()
-	// messageService := service.NewMessageService(messageRepo, channelRepo, userRepo)
+	// messageRepository := message.NewDBMessageRepository()
+	// messageService := service.NewMessageService(messageRepository, channelRepository, userRepository)
 	// messageHandler := handlers.NewMessageHandler(messageService)
 
 	return &Dependencies{

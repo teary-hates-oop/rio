@@ -80,7 +80,9 @@ func (s *UserService) Register(username, password string) (*models.User, error) 
 		return nil, err
 	}
 
-	validateUsername(&username)
+	if err := validateUsername(&username); err != nil {
+		return nil, err
+	}
 
 	user := &models.User{
 		ULID:     ulid.Make().String(),

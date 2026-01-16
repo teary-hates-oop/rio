@@ -75,11 +75,22 @@ func (s *ServerService) CreateServer(currentUserID, name string) (*models.Server
 	if len(name) < 3 || len(name) > 100 {
 		return nil, errors.New("server name must be between 3 and 100 characters")
 	}
+	u, err := s.userRepo.GetUserByID(currentUserID)
+	if err != nil {
+		return nil, errors.New("user does not exist (contact dev)")
+	}
 
+	users := make([]models.User, 1)
+	users = append(users, *u)
 	newServer := models.Server{
 		ULID:    ulid.Make().String(),
 		Name:    name,
 		OwnerID: currentUserID,
+		Users:   users,
+	}
+
+	if newServer.ULID == "" {
+		return nil, errors.New("failed to generate ULID")
 	}
 
 	if err := s.serverRepo.Create(&newServer); err != nil {
@@ -125,7 +136,6 @@ func (s *ServerService) IsUserMember(currentUserID, serverID string) (bool, erro
 
 func (s *ServerService) UpdateServerName(currentUserID, serverID, newName string) error {
 	newName = html.EscapeString(strings.TrimSpace(newName))
-
 	if newName == "" {
 		return errors.New("server name cannot be empty")
 	}
@@ -143,11 +153,11 @@ func (s *ServerService) UpdateServerName(currentUserID, serverID, newName string
 		return err
 	}
 	if membership == nil {
-		return errors.New("user is not a member of server")
+		return errors.New("you are not a member of this server")
 	}
 
 	if membership.Role != "owner" && membership.Role != "admin" {
-		return errors.New("insufficient permissions")
+		return errors.New("only server owner or admin can update the server name")
 	}
 
 	err = s.serverRepo.UpdateServer(serverID, &models.Server{Name: newName})

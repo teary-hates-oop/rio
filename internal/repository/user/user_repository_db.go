@@ -41,7 +41,7 @@ func (r *DBUserRepository) GetUserByID(id string) (*models.User, error) {
 	err := db.DB.Where("ul_id = ?", id).First(&u).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("user not found.")
+			return nil, nil
 		}
 		return nil, err
 	}

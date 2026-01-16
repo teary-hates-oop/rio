@@ -27,14 +27,14 @@ func GetNextServerId() int {
 	return id
 }
 
-func GetNextChannelId() int {
-	id := nextChannelID
+func GetNextChannelId() uint {
+	id := uint(nextChannelID)
 	nextChannelID++
 	return id
 }
 
-func GetNextMessageId() int {
-	id := nextMessageID
+func GetNextMessageId() uint {
+	id := uint(nextMessageID)
 	nextMessageID++
 	return id
 }

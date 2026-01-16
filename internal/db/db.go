@@ -40,4 +40,6 @@ func ConnectDataBase() {
 	}
 
 	DB.AutoMigrate(&models.User{})
+	DB.AutoMigrate(&models.Server{})
+	DB.AutoMigrate(&models.UserServer{})
 }

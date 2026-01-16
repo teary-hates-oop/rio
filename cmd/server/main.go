@@ -1,7 +1,6 @@
 package main
 
 import (
-	"rio/internal/handlers"
 	"rio/internal/setup"
 	"rio/middlewares"
 
@@ -14,29 +13,33 @@ func main() {
 	router := gin.Default()
 
 	public := router.Group("/api")
-	// Users
+
 	public.POST("/register", deps.UserHandler.Register)
 	public.POST("/login", deps.UserHandler.Login)
 	public.GET("/users", deps.UserHandler.GetUsers)
 	public.GET("/users/:username", deps.UserHandler.FindUsername)
 
-	//Admin
-	protected := router.Group("/api/admin")
+	protected := router.Group("/api")
 	protected.Use(middlewares.JwtAuthMiddleware())
-	protected.GET("/user", deps.UserHandler.CurrentUser)
 
-	// Server
-	router.POST("/servers", handlers.CreateServer)
-	router.GET("/servers", handlers.GetServers)
+	protected.GET("/me", deps.UserHandler.CurrentUser)
 
-	// Channel
-	router.POST("/channels", handlers.CreateChannel)
-	router.GET("/channels/:server_id", handlers.GetChannels)
+	protected.POST("/servers", deps.ServerHandler.CreateServer)
+	protected.GET("/servers", deps.ServerHandler.GetServers)
+	protected.GET("/servers/:id", deps.ServerHandler.GetServer)
+	protected.PATCH("/servers/:id", deps.ServerHandler.UpdateServer)
+	protected.DELETE("/servers/:id", deps.ServerHandler.DeleteServer)
 
-	// Messages
-	router.POST("/messages/:channel_id", handlers.SendMessage)
-	router.GET("/messages/:channel_id", handlers.GetMessages)
+	protected.POST("/servers/:id/members", deps.ServerHandler.AddMember)
+	protected.DELETE("/servers/:id/members/:userId", deps.ServerHandler.RemoveMember)
+	protected.PATCH("/servers/:id/members/:userId/role", deps.ServerHandler.ChangeMemberRole)
 
+	// protected.POST("/servers/:serverId/channels", deps.ChannelHandler.CreateChannel)
+	// protected.GET("/servers/:serverId/channels", deps.ChannelHandler.GetChannels)
+
+	// protected.POST("/channels/:channelId/messages", deps.MessageHandler.SendMessage)
+	// protected.GET("/channels/:channelId/messages", deps.MessageHandler.GetMessages)
+
+	// Start the server
 	router.Run("localhost:8080")
-
 }

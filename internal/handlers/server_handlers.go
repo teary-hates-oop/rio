@@ -145,3 +145,114 @@ func (h *ServerHandler) DeleteServer(c *gin.Context) {
 
 	c.Status(http.StatusNoContent)
 }
+
+func (h *ServerHandler) AddMember(c *gin.Context) {
+	currentUserID := c.GetString("user_id")
+	if currentUserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return
+	}
+
+	serverID := c.Param("id")
+	if serverID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "server ID is required"})
+		return
+	}
+
+	var input struct {
+		UserID string `json:"userId" binding:"required"`
+		Role   string `json:"role" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.service.AddMember(currentUserID, serverID, input.UserID, input.Role)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		if strings.Contains(err.Error(), "permissions") || strings.Contains(err.Error(), "insufficient") {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusCreated)
+}
+
+func (h *ServerHandler) RemoveMember(c *gin.Context) {
+	currentUserID := c.GetString("user_id")
+	if currentUserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return
+	}
+
+	serverID := c.Param("id")
+	targetUserID := c.Param("userId")
+
+	if serverID == "" || targetUserID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "server ID and user ID are required"})
+		return
+	}
+
+	err := h.service.RemoveMember(currentUserID, serverID, targetUserID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		if strings.Contains(err.Error(), "permissions") || strings.Contains(err.Error(), "insufficient") {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+func (h *ServerHandler) ChangeMemberRole(c *gin.Context) {
+	currentUserID := c.GetString("user_id")
+	if currentUserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return
+	}
+
+	serverID := c.Param("id")
+	targetUserID := c.Param("userId")
+
+	if serverID == "" || targetUserID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "server ID and user ID are required"})
+		return
+	}
+
+	var input struct {
+		Role string `json:"role" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.service.ChangeMemberRole(currentUserID, serverID, targetUserID, input.Role)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		if strings.Contains(err.Error(), "permissions") || strings.Contains(err.Error(), "insufficient") {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
